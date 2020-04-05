@@ -79,7 +79,7 @@ def check_location(line, locations):
     location = " / ".join(formatted_sep)
     final_location = unidecode.unidecode(location)
     if location != final_location:
-        logger.info(f"Location column: changed {location} to {final_location}.")
+        logger.info(f"'Location' column: changed '{location}' to '{final_location}'.")
     if final_location not in locations:
         locations[location] = final_location
     line["covv_location"] = location
@@ -131,8 +131,8 @@ def check_details(line, details_list):
         final_details = unidecode.unidecode(final_details)
     # If something changed, write to log
     if final_details != details:
-        logger.info(f"Passage details/history column: changed {details} "
-                    f"to {final_details}.")
+        logger.info(f"'Passage details/history' column: changed '{details}' "
+                    f"to '{final_details}'.")
     # Add this to detail_list so that, next time, we do not need to check if
     # we have the same details input
     if not details in details_list:
