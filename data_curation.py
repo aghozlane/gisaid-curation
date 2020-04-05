@@ -8,15 +8,22 @@ April 2020
 """
 
 import sys
+import logging
+from logging import FileHandler
 import pandas as pd
+import unidecode
+
 
 
 def cure_metadata(file_in):
     """
     file_in in xls format
     """
-    locations = {}  # to put old -> new location
-    dates = {}
+    # dict to put {original_value: new_value} (new_value can be the same as original one)
+    # to avoid re-checking next time we see this value
+    locations_list = {}
+    dates_list = {}
+    details_list = {}
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     # Empty cells -> put empty string
     md = md.fillna("")
@@ -27,14 +34,14 @@ def cure_metadata(file_in):
         # Skip 2nd header line
         if "filename" in line["fn"]:
             continue
-        check_location(line, locations)
-        check_details(line)
-        check_date(line, dates)
+        check_location(line, locations_list)
+        check_details(line, details_list)
+        # check_date(line, dates)
 
 
-        break
-    print(locations)
-    print(dates)
+    print(locations_list)
+    print(details_list)
+    # print(dates)
         # check_virus_name(line)
 
         # print(line)
@@ -50,21 +57,31 @@ def check_location(line, locations):
     locations -> dict {prev_loc: new_loc}
     """
     location = line["covv_location"]
-    print(location)
-    # try:
+    # If we already saw this field, and it was valid, just skip checking this time
+    if location in locations:
+        return
+
+    # Separate by continent, country, region
     sep = location.strip().split("/")
     sep = [f.strip() for f in sep]
     formatted_sep = checked_location_format(location, locations)
-    location = " / ".join(formatted_sep)
-    answer = input(f"Is location '{location}' ok? ([Y]/n)")
+    final_location = " / ".join(formatted_sep)
+    unicode_location = unidecode.unidecode(final_location)
+    answer = input(f"Is location '{unicode_location}' ok? ([Y]/n)")
     while answer.lower() not in ["yes", "y", "no", "n", ""]:
-        answer = input(f"Is location '{location}' ok? ([Y]/n)")
+        if unidecode_location != location:
+            print(f"{location} was corrected.")
+        answer = input(f"Is location '{unicode_location}' ok? ([Y]/n)")
     if answer.lower() in ["n", "no"]:
         answer = input("Please enter correct location, in "
                        "format 'Continent / Country / Region'\n")
         formatted_sep = checked_location_format(answer, locations)
     location = " / ".join(formatted_sep)
-    print(f"location is {location}")
+    final_location = unidecode.unidecode(location)
+    if location != final_location:
+        logger.info(f"Location column: changed {location} to {final_location}.")
+    if final_location not in locations:
+        locations[location] = final_location
     line["covv_location"] = location
 
 
@@ -76,30 +93,51 @@ def checked_location_format(location, locations):
     locations -> dict {prev_loc: new_loc}
     """
     sep = location.strip().split("/")
+    # Keep only elements without ' ' & co
     sep = [f.strip() for f in sep]
     new_sep = sep
+
+    # Check that location has at least continent, and at most 3 fields
+    # If not, ask user for location field
     while len(new_sep) < 2 or len(new_sep) > 3:
         print(f"Wrong format for location: {location}")
         answer = input("Please enter correct location, in "
                        "format 'Continent / Country / Region'\n") 
         new_sep = answer.strip().split("/")
         new_sep = [f.strip().capitalize() for f in new_sep]
+    # If fields changed, re-do location
     if sep != new_sep:
-        location = " / ".join(new_sep)
-        locations[location] = location
+        final_location = " / ".join(new_sep)
+        if location not in locations:
+            locations[location] = final_location
     return new_sep
 
 
-def check_details(line):
+def check_details(line, details_list):
     """
     line = pandas.core.series.Series
     """
     details = line["covv_passage"]
+    # If we already saw this field, and it was valid, just skip checking this time
+    if details in details_list:
+        return
+
+    # If empty: put 'unknown'
     if not details or details.lower() == "unknown":
-        line["covv_passage"] = "unknown"
+        final_details = "unknown"
+    # Put first letter in upper case, and remove accents
     else:
-        line["covv_passage"] = details.capitalize()
-    details = line["covv_passage"]
+        final_details = details.capitalize()
+        final_details = unidecode.unidecode(final_details)
+    # If something changed, write to log
+    if final_details != details:
+        logger.info(f"Passage details/history column: changed {details} "
+                    f"to {final_details}.")
+    # Add this to detail_list so that, next time, we do not need to check if
+    # we have the same details input
+    if not details in details_list:
+        details_list[details] = final_details
+    line["covv_passage"] = final_details
 
 
 def check_date(line, dates):
@@ -189,8 +227,29 @@ def check_virus_name(line):
 
 
 
+def init_logger(logfile):
+    """
+    Start logger with appropriate format
+    """
+    logger = logging.getLogger("cure_metadata")
+    level = logging.DEBUG
+    logger.setLevel(level)
+    # create formatter for log messages (only logs in logfile)
+    formatterFile = logging.Formatter('%(levelname)s :: %(message)s')
+    # formatterStream = logging.Formatter('  * %(message)s')
+
+    # Create logfile handler: writing to 'logfile'. mode 'write'.
+    open(logfile, "w").close()  # empty logfile if already existing
+    logfile_handler = FileHandler(logfile, 'w')
+
+    # set level to the same as the logger level
+    logfile_handler.setLevel(level)
+    logfile_handler.setFormatter(formatterFile)  # add formatter
+    logger.addHandler(logfile_handler)  # add handler to logger
+    return logger
 
 
 if __name__ == '__main__':
     metadata = sys.argv[1]
-    cure_metadata(metadata)
+    logger = init_logger(f"{metadata}.log")
+    logger = cure_metadata(metadata)
