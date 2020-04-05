@@ -24,6 +24,7 @@ def cure_metadata(file_in):
     locations_list = {}
     dates_list = {}
     details_list = {}
+    vnames_list = []  # list of virus names
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     # Empty cells -> put empty string
     md = md.fillna("")
@@ -35,12 +36,14 @@ def cure_metadata(file_in):
         if "filename" in line["fn"]:
             continue
         check_location(line, locations_list)
+        check_vname(line, vnames_list)
         check_details(line, details_list)
         # check_date(line, dates)
 
 
     print(locations_list)
     print(details_list)
+    print(vnames_list)
     # print(dates)
         # check_virus_name(line)
 
@@ -99,7 +102,7 @@ def checked_location_format(location, locations):
 
     # Check that location has at least continent, and at most 3 fields
     # If not, ask user for location field
-    while len(new_sep) < 2 or len(new_sep) > 3:
+    while len(new_sep) < 2:
         print(f"Wrong format for location: {location}")
         answer = input("Please enter correct location, in "
                        "format 'Continent / Country / Region'\n") 
@@ -113,11 +116,101 @@ def checked_location_format(location, locations):
     return new_sep
 
 
+def check_vnames(line, vnames_list):
+    """
+    line = pandas.core.series.Series
+    vnames_list : dict
+    """
+    # Get given virus name, and given location (to compare with 2nd field of virus name)
+    vname = line["covv_virus_name"]
+    location = line["covv_location"]
+
+    # If vname already exists : problem
+    uniq = False
+    while not uniq:
+        if vname not in vnames_list:
+            uniq = True
+        else:
+            print(f"ERROR: {vname} already exists! Virus names must be unique.")
+            answer = input("Please give correct virus name or type 'STOP' "
+                           "to stop program and go back yourself to the xls file.")
+            if answer == "STOP":
+                sys.exit(1)
+
+    # We are now sure that the virus name is unique. Let's check if it has the 4 required fields.
+    fields_ok = False
+    while not fields_ok:
+        if len(fields) == 4:
+            fields_ok = True
+        else:
+            print(f"'{vname}' is not a valid virus name. It should follow this format: "
+                  "hCoV-19/Country/Identifier/2020.")
+            answer = input("Please give correct virus name, or type 'STOP' "
+                           "to stop program and go back yourself to the xls file.")
+            if answer == "STOP":
+                sys.exit(1)
+
+    # We are now sure that virus name is uniq, and there are 4 fields
+    # Fields required for a virus name
+    final_vname = checked_vname_format(vname, vnames_list, location)
+    vnames_list.append(final_vname)
+    line["covv_virus_name"] = final_vname
+    # Log if we changed something
+    if vname != final_vname:
+        logger.info(f"Changed sequence name '{vname}' to '{final_vname}'.")
+
+
+def checked_vname_format(vname, vnames_list, location):
+    """
+    Check if vname is in expected format: hCoV-19/Country/Identifier/2020
+
+    vname -> str
+    vnames -> list of virus names
+    location : str
+    """
+    name = ""
+    country = ""
+    v_id = ""
+    date = ""
+    fields = vname.split("/")
+
+    # Check if all fields are as expected
+    for field in fields:
+        if field == "hCoV-19":
+            name = field
+        elif field == "2020":
+            date = field
+        elif field in location:
+            country = field
+        # not a date, location nor covid19 -> must be the id
+        else:
+            v_id = field
+    if not name or not date:
+        name = "hCoV-19"
+        date = "2020"
+    # If some required field missing -> error message
+    if not country:
+        fields_location = location.split("/")
+        if len(final_location) == 1:
+            country = fields_location[0].strip()
+        else:
+            country = location.split("/")[1].strip()
+        print(f"'{vname}' is not a valid virus name. It should follow this format: "
+               "hCoV-19/Country/Identifier/2020. Here, 'Country' does not correspond "
+               "to what is given in 'Location' column. We took the correct contry directly "
+               "from this 'Location' column: ")
+
+    final_vname = "/".join([name, country, v_id, date])
+    return final_vname = 
+
+
+
 def check_details(line, details_list):
     """
     line = pandas.core.series.Series
     """
     details = line["covv_passage"]
+    seq = line["covv_virus_name"]
     # If we already saw this field, and it was valid, just skip checking this time
     if details in details_list:
         return
@@ -131,7 +224,7 @@ def check_details(line, details_list):
         final_details = unidecode.unidecode(final_details)
     # If something changed, write to log
     if final_details != details:
-        logger.info(f"'Passage details/history' column: changed '{details}' "
+        logger.info(f"In {seq}, 'Passage details/history' column changed from '{details}' "
                     f"to '{final_details}'.")
     # Add this to detail_list so that, next time, we do not need to check if
     # we have the same details input
@@ -140,11 +233,14 @@ def check_details(line, details_list):
     line["covv_passage"] = final_details
 
 
-def check_date(line, dates):
+def check_date(line, dates_list):
     """
     line = pandas.core.series.Series
     """
     date = str(line["covv_collection_date"])
+    seq = line["covv_virus_name"]
+    if date in dates_list:
+        return
     if not date or date.lower() == "unknown":
         line["covv_collection_date"] = "unknown"
         return
@@ -190,40 +286,6 @@ def check_date(line, dates):
 #                         "Please enter correct collection date in YYYY or "
 #                         "YYYY-MM or YYYY-MM-DD format ")
 #         break
-
-
-
-def check_virus_name(line):
-    """
-    line = pandas.core.series.Series
-    """
-    # Get given virus name, and given location (to compare with 2nd field of virus name)
-    virus_id = line["covv_virus_name"]
-    location = line["covv_location"]
-    # Fields required for a virus name
-    name = ""
-    country = ""
-    v_id = ""
-    date = ""
-    fields = virus_id.split("/")
-    # Check if all fields are present, and ok
-    for field in fields:
-        if field == "hCoV-19":
-            name = field
-        elif field == "2020":
-            date = field
-        elif field in location:
-            country = field
-        # not a date, location nor covid19 -> must be the id
-        else:
-            v_id = field
-    # If some required field missing -> error message
-    if not name or not date or not country:
-        print(f"Error in virus name: {virus_id}")
-
-        # break
-    virus_id = "/".join([name, country, v_id, date])
-    line["covv_virus_name"] = virus_id
 
 
 
