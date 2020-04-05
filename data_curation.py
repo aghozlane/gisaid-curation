@@ -36,7 +36,7 @@ def cure_metadata(file_in):
         if "filename" in line["fn"]:
             continue
         check_location(line, locations_list)
-        check_vname(line, vnames_list)
+        # check_vname(line, vnames_list)
         check_details(line, details_list)
         # check_date(line, dates)
 
@@ -201,8 +201,7 @@ def checked_vname_format(vname, vnames_list, location):
                "from this 'Location' column: ")
 
     final_vname = "/".join([name, country, v_id, date])
-    return final_vname = 
-
+    return final_vname
 
 
 def check_details(line, details_list):
@@ -286,7 +285,6 @@ def check_date(line, dates_list):
 #                         "Please enter correct collection date in YYYY or "
 #                         "YYYY-MM or YYYY-MM-DD format ")
 #         break
-
 
 
 def init_logger(logfile):
