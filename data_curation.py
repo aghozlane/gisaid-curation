@@ -320,55 +320,56 @@ def check_column(line, column, column_list, capital=False):
         if column_text in column_list:
             final_column_text = column_list[column_text]
             text_ok = True
-        # If empty: put 'unknown'
+        # If empty or UNKNOWN: put 'unknown'
         elif not column_text or column_text.lower() == "unknown":
             final_column_text = "unknown"
             text_ok = True
-        # Put first letter in upper case, and remove accents
         else:
+            # Put first letter in upper case if asked
             if capital:
                 final_column_text = column_text.capitalize()
+            # Remove accents
             final_column_text = unidecode.unidecode(final_column_text)
+            text_ok = True
 
-        # If something changed:
-        # if check=True: ask user to check new field.
-        # write to log
-        # if final_column_text != column_text:
-        #     # if check=True: ask user to check new field.
-        #     if check:
-        #     while answer.lower() not in ["yes", "y", "no", "n", ""]:
-        #         if unidecode_location != location:
-        #             print(f"{location} was corrected.")
-        #             answer = input(f"Is location '{unicode_location}' ok? ([Y]/n)")
-        #         if answer.lower() in ["n", "no"]:
-        #             answer = input("Please enter correct location, in "
-        #                            "format 'Continent / Country / Region'\n")
-        #             logger.info(f"In {seq}, 'Passage details/history' column changed from '{column_text}' "
-        #                 f"to '{final_column_text}'.")
-        # Add this to column_list so that, next time, we do not need to check if
-        # we have the same column input
-        if not column_text in column_list:
-            column_list[column_text] = final_column_text
-            line[column] = final_column_text
+    if not column_text in column_list:
+        column_list[column_text] = final_column_text
+        line[column] = final_column_text
+
+    if final_column_text != column_text:
+        logger.info(f"'{column}' column: changed '{column_text}' to '{final_column_text}'.")
 
 
 def check_date(line, dates_list):
     """
     line = pandas.core.series.Series
     """
-    date = str(line["covv_collection_date"])
+    ori_date = line["covv_collection_date"]
+    # Try to convert date to string, if it was in date format in excel
+    try:
+        ori_date = pd.to_datetime(ori_date).strftime("%Y-%m-%d")
+    # If not able to convert, stay as it is, and it will be checked as a string
+    except:
+        pass
     seq = line["covv_virus_name"]
-    if date in dates_list:
+    # If we already saw and checked this, reuse what has been done
+    if ori_date in dates_list:
         return
-    if not date or date.lower() == "unknown":
+    # If no date given, put unknown
+    if not ori_date or ori_date.lower() == "unknown":
         line["covv_collection_date"] = "unknown"
         return
+
+    # Date given and never seen before: check format
     correct_format = False
-    numbers = date
+    numbers = ori_date
+    date = ori_date
     while not correct_format:
         try:
+            # get year, month, day
             numbers = numbers.split("-")
-            numbers = [int(n.strip()) for n in numbers]
+            # Try to convert each field to int. If it does not work -> error in date format
+            numbers_int = [int(n.strip()) for n in numbers]
             if len(numbers) == 0 or len(numbers) > 3:
                 raise ValueError
             if len(str(numbers[0])) != 4:
@@ -379,17 +380,46 @@ def check_date(line, dates_list):
                 raise ValueError("Day not in DD format")
             correct_format = True
         except ValueError as e:
-            print()
-            if "not in" in str(e):
-                print(e)
+            print("------COLLECTION DATE checking-----")
             numbers = input(f"Wrong format for collection date: {date}. \n"
                             "Please enter correct collection date in YYYY or "
-                            "YYYY-MM or YYYY-MM-DD format:")
+                            "YYYY-MM or YYYY-MM-DD format:\n")
+            date = numbers
     str_numbers = [str(n) for n in numbers]
     date_ok = "-".join(str_numbers)
-    dates[date] = date_ok
+    dates_list[date] = date_ok
     line["covv_collection_date"] = date_ok
+    if date_ok != ori_date:
+        logger.info(f"'Collection date' column: changed '{ori_date}' to '{date_ok}'.")
 
+
+def check_gender(line, genders_list):
+    """
+    check gender: must be Male, Female or unknown
+    """
+    gender_checked = False
+    ori_gender = line['covv_gender']
+    gender = ori_gender
+    while not gender_checked:
+        if not gender or "unknown" in gender.lower():
+            final_gender = "unknown"
+            gender_checked = True
+        elif gender == "Female" or gender == "Male":
+            final_gender = gender
+            gender_checked = True
+        elif gender.lower() == "m":
+            final_gender = "Male"
+            gender_checked = True
+        elif gender.lower() == "f":
+            final_gender = "Female"
+            gender_checked = True
+        else:
+            print("------GENDER checking-----")
+            gender = input(f"Wrong format for gender: {gender}. \n"
+                            "Please enter Male (m), Female (f) or unkown (u)\n")
+    if final_gender != ori_gender:
+        logger.info(f"'Gender' column: changed '{ori_gender}' to '{final_gender}'.")
+          
 
 if __name__ == '__main__':
     metadata = sys.argv[1]
