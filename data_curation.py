@@ -250,7 +250,8 @@ def check_vnames(line, vnames_list, countries, corresp_file):
     if vname != final_vname:
         with open(corresp_file, "a") as cf:
             cf.write("\t".join([orig_vname, final_vname]) + "\n")
-        logger.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
+        logger_log.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
+        logger_contact.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
 
 
 def checked_vname_format(vname, vnames_list, location, countries):
