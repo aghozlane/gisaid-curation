@@ -158,7 +158,8 @@ def check_location(line, locations):
     location = " / ".join(formatted_sep)
     final_location = unidecode.unidecode(location)
     if location != final_location:
-        logger.info(f"'Location' column: changed '{location}' to '{final_location}'.")
+        logger_log.info(f"'Location' column: changed '{location}' to "
+                        f"'{final_location}'.")
     if final_location not in locations:
         locations[location] = final_location
     line["covv_location"] = location
