@@ -40,11 +40,26 @@ def init_logger(logfile, logname):
     # formatterStream = logging.Formatter('  * %(message)s')
 
     # Create logfile handler: writing to 'logfile'. mode 'write'.
-    open(logfile, "w").close()  # empty logfile if already existing
-    logfile_handler = FileHandler(logfile, 'w')
+    # To write all changes done
+    logfile_log = logfile + ".changes.log"
+    open(logfile_log, "w").close()  # empty logfile if already existing
+    logfile_handler1 = FileHandler(logfile_log, 'w')
 
-    # set level to the same as the logger level
-    logfile_handler.setLevel(level)
-    logfile_handler.setFormatter(formatterFile)  # add formatter
-    logger.addHandler(logfile_handler)  # add handler to logger
+    # Create logfile handler: writing to 'logfile'. mode 'write'.
+    # To write things that must be sent to submitter (warning), and if 
+    # sequence cannot be released (error)
+    logfile_contact = logfile + ".contact_sub.log"
+    open(logfile_contact, "w").close()  # empty logfile if already existing
+    logfile_handler2 = FileHandler(logfile_contact, 'w')
+
+    # set level of changes.log to the same as the logger level
+    logfile_handler1.setLevel(level)
+    logfile_handler1.setFormatter(formatterFile)  # add formatter
+    logger.addHandler(logfile_handler1)  # add handler to logger
+
+    # set level of contact_sub.log to warning level
+    logfile_handler2.setLevel(logging.warning)
+    logfile_handler2.setFormatter(formatterFile)  # add formatter
+    logger.addHandler(logfile_handler2)  # add handler to logger
+
     return logger

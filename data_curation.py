@@ -40,82 +40,45 @@ def cure_metadata(file_in):
     details_list = {}
     hosts_list = {}
     countries = {}  # countries found in virus names.
+    genders_list = {}
+    covs_list = {}
     vnames_list = []  # list of virus names
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     # Empty cells -> put empty string
     md = md.fillna("")
-    # print(md.dtypes)
-    # print(md["covv_passage"].head(n=13))
-    # print(md["submitter"])
+    corresp_file = f"{file_in}.virus_IDs.txt"
+    # create empty file
+    open(corresp_file, "w").close()
     for index, line in md.iterrows():
         # Skip 2nd header line
         if "filename" in line["fn"]:
             continue
         check_location(line, locations_list)
-        print()
-        check_vnames(line, vnames_list, countries)
-        print()
-        # check_mandatory_fieldk(line, "covv_orig_lab")
-        # check_mandatory_field(line, "covv_orig_lab_addr")
-        # check_mandatory_field(line, "covv_subm_lab")
-        # check_mandatory_field(line, "covv_subm_lab_addr")
-        # check_mandatory_field(line, "covv_seq_technology", alert=True)
-        # check_location(line, locations_list)
-        # check_vname(line, vnames_list)
+        print("")
+        check_vnames(line, vnames_list, countries, corresp_file)
+        print("")
+        check_date(line, dates_list)
         # Check passage history/details column
         check_column(line, "covv_passage", details_list, capital=True)
-        print()
+        print("")
         # Check host
-        # check_column(line, "covv_host", hosts_list)
-        # Check
+        check_column(line, "covv_host", hosts_list, capital=True)
+        # Check gender
+        check_gender(line, genders_list)
+        # Check originating and submitting lab and address
+        # If not given, contact submitter and DO NOT release
+        check_mandatory_field(line, "covv_orig_lab", column_list, alert=True)
+        check_mandatory_field(line, "covv_orig_lab_addr", column_list, alert=True)
+        check_mandatory_field(line, "covv_subm_lab", column_list, alert=True)
+        check_mandatory_field(line, "covv_subm_lab_addr", column_list, alert=True)
+        # Check sequence information. If not given, contact submitter, but release
+        check_mandatory_field(line, "covv_assembly_method", column_list, alert=False)
+        check_mandatory_field(line, "covv_seq_technology", column_list, alert=False)
+        # Check coverage
+        check_coverage(line, covs_list)
 
-        # check_date(line, dates)
-
-    # location : at least 2 fields (pas uniquement le continent)
-    # virus name: space in country. no accent at all (id, country)
-
-    print(locations_list)
-    print(details_list)
-    print(vnames_list)
-    # print(dates)
-        # check_virus_name(line)
-
-        # print(line)
-        # break
-    print(md["covv_orig_lab"].head(n=13))
-    print(md["covv_orig_lab_addr"].head(n=13))
-    print(md["covv_subm_lab"].head(n=13))
-    print(md["covv_subm_lab_addr"].head(n=13))
-    print(md["covv_seq_technology"].head(n=13))
-
-
-
-def check_mandatory_field(line, column, alert=False):
-    """
-    For a mandatory field, check that there is something in it. If not, ask user to fill
-    Works for:
-    - originating lab
-    - address originating lab
-    - submitting lab
-    - address submitting lab
-
-    """
-    text = line[column]
-    seq = line["covv_virus_name"]
-    new_text = text
-    while not new_text:
-        if alert:
-            logger.warning(f"ALERT: {seq} has no {column} text. Filled to unknown. CONTACT SUBMITTER")
-            new_text = "unknown"
-            break
-        print()
-        print(f"For '{seq}' sequence, '{column}' column must be filled.")
-        new_text = input("Please enter correct a value for this column'")
-        check_mandatory_field(line, column, alert=alert)
-    if text != new_text:
-        logger.info(f"For sequence {seq}, '{column}' column: changed '{text}' to '{new_text}'.")
-        line[column] = new_text
-
+    logger.error("TO SUBMITTER: check 'Patient age'.")
+    logger.error("TO SUBMITTER: check 'Authors'.")
 
 
 def check_location(line, locations):
@@ -126,43 +89,46 @@ def check_location(line, locations):
     locations -> dict {prev_loc: new_loc}
     """
     write_warning = True
+    ori_location = line["covv_location"]
+    location = ori_location
 
-    location = line["covv_location"]
     # If we already saw this field, and it was valid, just skip checking this time
     if location in locations:
-        return
-
-    # Separate by continent, country, region
-    sep = location.strip().split("/")
-    sep = [f.strip() for f in sep]
-    formatted_sep = checked_location_format(location, locations)
-    final_location = " / ".join(formatted_sep)
-    unidecode_location = unidecode.unidecode(final_location)
-    if final_location != unidecode_location:
-        print("------LOCATION checking-----")
-        print(f"{location} was changed to {unidecode_location}.")
-        write_warning = False
-    if write_warning:
-        print("------LOCATION checking-----")
-    # Ask user to validate location
-    answer = input(f"Is location '{unidecode_location}' ok? ([Y]/n)")
-    # If answer not yes/no, re-ask question
-    while answer.lower() not in ["yes", "y", "no", "n", ""]:
+        line["covv_location"] = locations[location]
+        final_location = location
+    else:
+        # Separate by continent, country, region
+        sep = location.strip().split("/")
+        sep = [f.strip() for f in sep]
+        formatted_sep = checked_location_format(location, locations)
+        final_location = " / ".join(formatted_sep)
+        unidecode_location = unidecode.unidecode(final_location)
+        # If we removed accents, inform curator and ask for approval
+        if final_location != unidecode_location:
+            print("------LOCATION checking-----")
+            print(f"{location} was changed to {unidecode_location}.")
+            write_warning = False
+        if write_warning:
+            print("------LOCATION checking-----")
+        # If it is a location we never saw before, ask user to validate
         answer = input(f"Is location '{unidecode_location}' ok? ([Y]/n)")
-    # if answer is no, ask user for new text for location
-    if answer.lower() in ["n", "no"]:
-        answer = input("Please enter correct location, in "
-                       "format 'Continent / Country / Region'\n")
-        # Check new given location is ok
-        formatted_sep = checked_location_format(answer, locations)
-    location = " / ".join(formatted_sep)
-    final_location = unidecode.unidecode(location)
-    if location != final_location:
-        logger_log.info(f"'Location' column: changed '{location}' to "
-                        f"'{final_location}'.")
+        # If answer not yes/no, re-ask question
+        while answer.lower() not in ["yes", "y", "no", "n", ""]:
+            answer = input(f"Is location '{unidecode_location}' ok? ([Y]/n)")
+        # if answer is no, ask user for new text for location
+        if answer.lower() in ["n", "no"]:
+            answer = input("Please enter correct location, in "
+                           "format 'Continent / Country / Region'\n")
+            # Check new given location is ok
+            formatted_sep = checked_location_format(answer, locations)
+        location = " / ".join(formatted_sep)
+        final_location = unidecode.unidecode(location)
+
+    # If location was changed, inform curator
     if final_location not in locations:
-        locations[location] = final_location
-    line["covv_location"] = location
+        logger.info(f"'Location' column: changed '{location}' to '{final_location}'.")
+        line["covv_location"] = location
+    locations[location] = final_location
 
 
 def checked_location_format(location, locations):
@@ -183,14 +149,9 @@ def checked_location_format(location, locations):
         print("------LOCATION checking-----")
         print(f"Wrong format for location: {location}")
         answer = input("Please enter correct location, in "
-                       "format 'Continent / Country / Region'\n") 
+                       "format 'Continent / Country [/ Region]'\n") 
         new_sep = answer.strip().split("/")
         new_sep = [f.strip().capitalize() for f in new_sep]
-    # If fields changed, re-do location
-    if sep != new_sep:
-        final_location = " / ".join(new_sep)
-        if location not in locations:
-            locations[location] = final_location
     return new_sep
 
 
@@ -243,18 +204,18 @@ def check_vnames(line, vnames_list, countries, corresp_file):
 
     # We are now sure that virus name is uniq, and there are 4 fields
     # Fields required for a virus name
-    final_vname = checked_vname_format(vname, vnames_list, location, countries)
+    final_vname = checked_vname_format(vname, location, countries)
     vnames_list.append(final_vname)
     line["covv_virus_name"] = final_vname
     # Log if we changed something
     if vname != final_vname:
         with open(corresp_file, "a") as cf:
             cf.write("\t".join([orig_vname, final_vname]) + "\n")
-        logger_log.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
-        logger_contact.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
+        logger.warning(f"Changed sequence name '{orig_vname}' to '{final_vname}'. "
+                        "Sequence can be released.")
 
 
-def checked_vname_format(vname, vnames_list, location, countries):
+def checked_vname_format(vname, location, countries):
     """
     Check if vname is in expected format: hCoV-19/Country/Identifier/2020
 
@@ -339,7 +300,7 @@ def check_column(line, column, column_list, capital=False):
         line[column] = final_column_text
 
     if final_column_text != column_text:
-        logger_log.info(f"'{column}' column: changed '{column_text}' to '{final_column_text}'.")
+        logger.info(f"'{column}' column: changed '{column_text}' to '{final_column_text}'.")
 
 
 def check_mandatory_field(line, column, column_list, alert=False):
@@ -357,26 +318,20 @@ def check_mandatory_field(line, column, column_list, alert=False):
     seq = line["covv_virus_name"]
     if text in column_list:
         new_text = column_list[text]
-        return
     else:
         new_text = text
     while not new_text:
         if alert:
-            logger_contact.warning(f"{seq} has no {column} text. Filled to unknown. "
-                                    "Please give this information. NO RELEASE")
+            logger.error(f"{seq} has no {column} text. Filled to unknown. "
+                          "Please give this information. NO RELEASE")
         else:
             logger_contact.warning(f"{seq} has no {column} text. Filled to unknown. "
                                     "Please give this information. Can be released.")
-        logger_log.warning(f"ALERT: {seq} has no {column} text. Filled to unknown. "
-                           "- contact submitter")
-        
         new_text = "unknown"
-        print(f"------{column.upper()} checking-----")
-        print(f"For '{seq}' sequence, '{column}' column must be filled.")
     # Remove accents
-    unidecode.unidecode(final_column_text)
+    unidecode.unidecode(new_text)
     if text != new_text:
-        logger_log.info(f"For sequence {seq}, '{column}' column: changed '{text}' to '{new_text}'.")
+        logger.info(f"For sequence {seq}, '{column}' column: changed '{text}' to '{new_text}'.")
         line[column] = new_text
         column_list[text] = new_text
 
@@ -428,11 +383,10 @@ def check_date(line, dates_list):
             date = numbers
     str_numbers = [str(n) for n in numbers]
     date_ok = "-".join(str_numbers)
-    dates_list[date] = date_ok
-    line["covv_collection_date"] = date_ok
+    dates_list[date] = str(date_ok)
+    line["covv_collection_date"] = str(date_ok)
     if date_ok != ori_date:
-        logger_log.info(f"'Collection date' column: changed '{ori_date}' "
-                        f"to '{date_ok}'.")
+        logger.info(f"'Collection date' column: changed '{ori_date}' to '{date_ok}'.")
 
 
 def check_gender(line, genders_list):
@@ -460,12 +414,54 @@ def check_gender(line, genders_list):
             gender = input(f"Wrong format for gender: {gender}. \n"
                             "Please enter Male (m), Female (f) or unkown (u)\n")
     if final_gender != ori_gender:
-        logger_log.info(f"'Gender' column: changed '{ori_gender}' to "
-                        f"'{final_gender}'.")
+        logger.info(f"'Gender' column: changed '{ori_gender}' to '{final_gender}'.")
           
+
+def check_coverage(line, cov_list):
+    """
+    Check coverage format: 
+    * ',' if > 1000
+    * lower 'x' after the number
+
+    If not given: unknown, contact submitter but release
+    """
+    cov_ok = False
+    ori_cov = line["covv_coverage"]  # keep original value
+    cov = ori_cov
+
+    while not cov_ok:
+        if cov in cov_list:
+            cov = cov_list[cov]
+            cov_ok = True
+        # If empty, fill with unknown and contact submitter
+        if not cov or cov.lower() == "unknown":
+            cov = "unknown"
+            logger.warning("Coverage not given. (Sequence can be released)")
+            cov_ok = True
+        if not cov_ok:
+            # First, keep only coverage number (no 'x')
+            cov = cov.lower().strip().split('x')[0]
+            # try to convert to int.
+            try:
+                int_cov = int(cov.replace(",", ""))
+                cov = str(f"{int_cov:,}")
+                cov_ok = true
+            except ValueError as e:
+                print("------COVERAGE checking-----")
+                cov = input(f"Given coverage ({cov}) is not an int. "
+                             "Please provide an int value for coverage. "
+                             "If coverage is unkown, type 'u':\n")
+                if cov == "u":
+                    cov = "unkown"
+
+    if ori_cov != cov:
+        logger.warning(f"'Coverage' column: changed '{ori_cov}' to "
+                       f"'{cov}'. Sequence can be released")
+        line["covv_coverage"] = cov
+    cov_list[ori_cov] = cov
+
 
 if __name__ == '__main__':
     metadata = sys.argv[1]
-    logger_log = utils.init_logger(f"{metadata}.changes.log", "changes")
-    logger_contact = utils.init_logger(f"{metadata}.contact_submitter.log", "changes")
+    logger = utils.init_logger(metadata, "changes")
     cure_metadata(metadata)
