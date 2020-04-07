@@ -339,7 +339,46 @@ def check_column(line, column, column_list, capital=False):
         line[column] = final_column_text
 
     if final_column_text != column_text:
-        logger.info(f"'{column}' column: changed '{column_text}' to '{final_column_text}'.")
+        logger_log.info(f"'{column}' column: changed '{column_text}' to '{final_column_text}'.")
+
+
+def check_mandatory_field(line, column, column_list, alert=False):
+    """
+    For a mandatory field, check that there is something in it. If not, ask submitter user 
+    to fill it.
+    Works for:
+    - originating lab
+    - address originating lab
+    - submitting lab
+    - address submitting lab
+
+    """
+    text = line[column]
+    seq = line["covv_virus_name"]
+    if text in column_list:
+        new_text = column_list[text]
+        return
+    else:
+        new_text = text
+    while not new_text:
+        if alert:
+            logger_contact.warning(f"{seq} has no {column} text. Filled to unknown. "
+                                    "Please give this information. NO RELEASE")
+        else:
+            logger_contact.warning(f"{seq} has no {column} text. Filled to unknown. "
+                                    "Please give this information. Can be released.")
+        logger_log.warning(f"ALERT: {seq} has no {column} text. Filled to unknown. "
+                           "- contact submitter")
+        
+        new_text = "unknown"
+        print(f"------{column.upper()} checking-----")
+        print(f"For '{seq}' sequence, '{column}' column must be filled.")
+    # Remove accents
+    unidecode.unidecode(final_column_text)
+    if text != new_text:
+        logger_log.info(f"For sequence {seq}, '{column}' column: changed '{text}' to '{new_text}'.")
+        line[column] = new_text
+        column_list[text] = new_text
 
 
 def check_date(line, dates_list):
