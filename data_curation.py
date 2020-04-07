@@ -431,7 +431,8 @@ def check_date(line, dates_list):
     dates_list[date] = date_ok
     line["covv_collection_date"] = date_ok
     if date_ok != ori_date:
-        logger.info(f"'Collection date' column: changed '{ori_date}' to '{date_ok}'.")
+        logger_log.info(f"'Collection date' column: changed '{ori_date}' "
+                        f"to '{date_ok}'.")
 
 
 def check_gender(line, genders_list):
