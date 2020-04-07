@@ -58,7 +58,7 @@ def init_logger(logfile, logname):
     logger.addHandler(logfile_handler1)  # add handler to logger
 
     # set level of contact_sub.log to warning level
-    logfile_handler2.setLevel(logging.warning)
+    logfile_handler2.setLevel(logging.WARNING)
     logfile_handler2.setFormatter(formatterFile)  # add formatter
     logger.addHandler(logfile_handler2)  # add handler to logger
 
