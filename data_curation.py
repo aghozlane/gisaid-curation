@@ -540,6 +540,7 @@ def check_coverage(line, cov_list):
 
 
 if __name__ == '__main__':
-    metadata = sys.argv[1]
+    parsed = utils.make_parser(sys.argv[1:])
+    metadata = parsed.xls_file
     logger = utils.init_logger(metadata, "changes")
     cure_metadata(metadata)

@@ -27,6 +27,7 @@
 import sys
 import logging
 from logging import FileHandler
+import argparse
 
 def init_logger(logfile, logname):
     """
@@ -63,3 +64,14 @@ def init_logger(logfile, logname):
     logger.addHandler(logfile_handler2)  # add handler to logger
 
     return logger
+
+
+def make_parser(argu):
+    """
+    generate args parser
+    """
+    my_parser = argparse.ArgumentParser(description="help for GISAID metadata curation")
+    my_parser.add_argument("-f", dest="xls_file",
+                           help="xls file containing metadata of your bulk.", required=True)
+    args = my_parser.parse_args(argu)
+    return args
