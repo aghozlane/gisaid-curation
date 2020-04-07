@@ -460,7 +460,8 @@ def check_gender(line, genders_list):
             gender = input(f"Wrong format for gender: {gender}. \n"
                             "Please enter Male (m), Female (f) or unkown (u)\n")
     if final_gender != ori_gender:
-        logger.info(f"'Gender' column: changed '{ori_gender}' to '{final_gender}'.")
+        logger_log.info(f"'Gender' column: changed '{ori_gender}' to "
+                        f"'{final_gender}'.")
           
 
 if __name__ == '__main__':
