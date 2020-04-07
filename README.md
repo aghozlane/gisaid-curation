@@ -1,5 +1,10 @@
 # Help for GISAID metadata curation process
 
+**Disclaimer:** This software is distributed as it is. Please double-check the results.
+If you encounter any bug/miss-correction, please put an issue on the github page, or send pull-requests!
+
+**This soft does not check 'patient age' and 'authors' columns. Please check them by yourself**
+
 ## Requirements
 
 Python3 with pip (pip3).
@@ -9,7 +14,7 @@ Python3 with pip (pip3).
 
 	git clone git@github.com:asetGem/gisaid-curation.git
 	cd gisaid-curation
-	pip3 install requirements.py
+	pip3 install --user requirements.py
 
 to update, go to gisaid-curation, and type
 	
