@@ -466,5 +466,6 @@ def check_gender(line, genders_list):
 
 if __name__ == '__main__':
     metadata = sys.argv[1]
-    logger = utils.init_logger(f"{metadata}.log")
-    logger = cure_metadata(metadata)
+    logger_log = utils.init_logger(f"{metadata}.changes.log", "changes")
+    logger_contact = utils.init_logger(f"{metadata}.contact_submitter.log", "changes")
+    cure_metadata(metadata)

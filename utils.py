@@ -28,11 +28,11 @@ import sys
 import logging
 from logging import FileHandler
 
-def init_logger(logfile):
+def init_logger(logfile, logname):
     """
     Start logger with appropriate format
     """
-    logger = logging.getLogger("cure_metadata")
+    logger = logging.getLogger(logname)
     level = logging.DEBUG
     logger.setLevel(level)
     # create formatter for log messages (only logs in logfile)
