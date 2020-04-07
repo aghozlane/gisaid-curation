@@ -193,7 +193,7 @@ def checked_location_format(location, locations):
     return new_sep
 
 
-def check_vnames(line, vnames_list, countries):
+def check_vnames(line, vnames_list, countries, corresp_file):
     """
     line = pandas.core.series.Series
     vnames_list : dict
@@ -247,6 +247,8 @@ def check_vnames(line, vnames_list, countries):
     line["covv_virus_name"] = final_vname
     # Log if we changed something
     if vname != final_vname:
+        with open(corresp_file, "a") as cf:
+            cf.write("\t".join([orig_vname, final_vname]) + "\n")
         logger.info(f"Changed sequence name '{orig_vname}' to '{final_vname}'.")
 
 
@@ -311,7 +313,6 @@ def check_column(line, column, column_list, capital=False):
     - assembly method
     """
     text_ok = False
-    seq = line["covv_virus_name"]
     column_text = line[column]
     final_column_text = ""
     while not text_ok:
