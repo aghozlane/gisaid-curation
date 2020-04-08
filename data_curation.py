@@ -116,7 +116,6 @@ def check_location(line, locations):
     write_warning = True
     ori_location = line["covv_location"]
     location = ori_location
-
     # If we already saw this field, and it was valid, just skip checking this time
     if location in locations:
         final_location = locations[location]
@@ -145,14 +144,15 @@ def check_location(line, locations):
                            "format 'Continent / Country / Region'\n")
             # Check new given location is ok
             formatted_sep = checked_location_format(answer, locations)
-        location = " / ".join(formatted_sep)
+        final_location = " / ".join(formatted_sep)
     
-    final_location = unidecode.unidecode(location)
+    final_location = unidecode.unidecode(final_location)
     # If location was changed, inform curator
     if ori_location != final_location:
         logger.info(f"'Location' column: changed '{ori_location}' to '{final_location}'.")
+
     line["covv_location"] = final_location
-    locations[location] = final_location
+    locations[ori_location] = final_location
 
 
 def checked_location_format(location, locations):
