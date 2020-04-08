@@ -1,6 +1,5 @@
 pandas
 xlrd
-#logging
 unidecode
 argparse
 xlwt
