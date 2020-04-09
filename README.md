@@ -14,7 +14,7 @@ Python3 with pip (pip3).
 
 	git clone git@github.com:asetGem/gisaid-curation.git
 	cd gisaid-curation
-	pip3 install --user requirements.py
+	pip3 install --user -r requirements.txt
 
 to update, go to your 'gisaid-curation' folder, and type
 	
