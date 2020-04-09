@@ -12,11 +12,11 @@ Python3 with pip (pip3).
 
 ## How to get it?
 
-Try to clone the repository using ssh: 
+If you have a github account and provided your ssh key, use: 
 
 	git clone git@github.com:asetGem/gisaid-curation.git
 
-If you did not put your ssh public key on github.com, use https:
+Otherwise, clone using https:
 
 	git clone https://github.com/asetGem/gisaid-curation.git
 
