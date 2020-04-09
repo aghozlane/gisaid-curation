@@ -12,7 +12,16 @@ Python3 with pip (pip3).
 
 ## How to get it?
 
+Try to clone the repository using ssh: 
+
 	git clone git@github.com:asetGem/gisaid-curation.git
+
+If you did not put your ssh public key on github.com, use https:
+
+	git clone https://github.com/asetGem/gisaid-curation.git
+
+Then:
+
 	cd gisaid-curation
 	pip3 install --user -r requirements.txt
 
