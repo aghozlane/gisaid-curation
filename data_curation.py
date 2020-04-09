@@ -57,21 +57,28 @@ def cure_metadata(file_in):
     # same as for assembly method
     skip_seqtechno = False
 
+    # Read input xls file
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     instructions = pd.read_excel(file_in, sheet_name=0, header=0, dtype=str)
-    # Empty cells -> put empty string
-    md = md.fillna("")
+
+    # Empty cells -> put 'NA filled up'. Chose not to put only "NA" because it could be a real value put by the user, and that should
+    # not be considered as an empty cell. So, to be sure it is empty, let's fill it with something that would never appear in reality
+    md = md.fillna("NA filled up")
     corresp_file = f"{file_in}.virus_IDs.txt"
-    # create empty file
+    # create empty file to put curated metadata
     open(corresp_file, "w").close()
+    # Check all fields, line by line
     for index, line in md.iterrows():
         # Skip 2nd header line
         if "filename" in line["fn"]:
             continue
+        # Check location field
         check_location(line, locations_list)
         print("")
+        # Check virus names
         check_vnames(line, vnames_list, countries, corresp_file)
         print("")
+        # Check dates
         check_date(line, dates_list)
         # Check passage history/details column
         check_column(line, "covv_passage", details_list, capital=True)
@@ -88,9 +95,13 @@ def cure_metadata(file_in):
         check_mandatory_field(line, "covv_subm_lab_addr", sublabaddress_list, alert=True)
         # Check sequence information. If not given, contact submitter, but release
         if not skip_assembly:
+            # Sometimes, assembly method was incremented by a bad "Excell fill down" by the user. Hence,
+            # it will always ask if method is ok (as these are different methods each time)
+            # Curator can skip this column
             skip_assembly = check_mandatory_field(line, "covv_assembly_method", assembly_list, 
                                                   alert=False, user_check=True)
         if not skip_seqtechno:
+            # same as for assembly_method
             skip_seqtechno = check_mandatory_field(line, "covv_seq_technology", seqtechno_list, 
                                                    alert=False, user_check=True)
         # Check coverage
