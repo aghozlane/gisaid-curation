@@ -72,6 +72,8 @@ def cure_metadata(file_in):
         # Skip 2nd header line
         if "filename" in line["fn"]:
             continue
+        # Check covv_type. 
+        check_type(line)
         # Check location field
         check_location(line, locations_list)
         print("")
@@ -115,6 +117,21 @@ def cure_metadata(file_in):
     instructions.to_excel(writer, sheet_name='instructions', index=False)
     md.to_excel(writer, sheet_name='Submissions', index=False)
     writer.save()
+
+
+def check_type(line):
+    """
+    type must always be 'betacoronavirus'
+
+    Parameters
+    ----------
+    line: pandas.core.series.Series
+        line currently checked
+    """
+    vtype = line["covv_type"]
+    if vtype != "betacoronavirus":
+        logger.info(f"Type changed from '{vtype}' to 'betacoronavirus'.")
+        line["covv_type"] = "betacoronavirus"
 
 
 def check_location(line, locations):
