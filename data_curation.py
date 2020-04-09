@@ -434,25 +434,27 @@ def check_date(line, dates_list):
     """
     line = pandas.core.series.Series
     """
-    ori_date = line["covv_collection_date"].strip()
+    # Save original field to write changes if there are
+    ori_date = line["covv_collection_date"].strip() 
+    new_date = ori_date
     # Try to convert date to string, if it was in date format in excel
     try:
-        ori_date = unidecode.unidecode(ori_date)
+        new_date = unidecode.unidecode(ori_date)
         # if complete date: written as 2020-03-01 00:00:00
         # if YYYY-MM -> written as is, so no need to change
-        if "00:00:00" in ori_date:
-            ori_date = str(pd.to_datetime(ori_date, yearfirst=True).strftime("%Y-%m-%d"))
-    # If not able to convert, stay as it is, and it will be checked as a string
+        if "00:00:00" in date:
+            new_date = str(pd.to_datetime(ori_date, yearfirst=True).strftime("%Y-%m-%d"))
+    # If not able to convert, date is already a string, so stay as it is, and it will be checked as a string
     except:
         pass
     seq = line["covv_virus_name"]
     # If we already saw and checked this, reuse what has been done
-    if ori_date in dates_list:
-        line["covv_collection_date"] = dates_list[ori_date]
-        return
-    # If no date given, put unknown
-    if not ori_date or ori_date.lower() == "unknown":
+    if new_date in dates_list:
+        line["covv_collection_date"] = dates_list[new_date]
+    # If no date given, put unknown (empty field is 'NA filled up')
+    if not new_date or new_date.lower() == "unknown" or new_date == "NA filled up":
         line["covv_collection_date"] = "unknown"
+        dates_list[new_date] = "unknown"
         return
 
     # Date given and never seen before: check format
@@ -482,7 +484,7 @@ def check_date(line, dates_list):
             date = numbers
     str_numbers = [str(n) for n in numbers]
     date_ok = "-".join(str_numbers)
-    dates_list[ori_date] = str(date_ok)
+    dates_list[ori_date] = date_ok
     line["covv_collection_date"] = date_ok
     if date_ok != ori_date:
         logger.info(f"'Collection date' column: changed '{ori_date}' to '{date_ok}'.")
