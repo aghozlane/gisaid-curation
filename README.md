@@ -25,11 +25,17 @@ Then:
 	cd gisaid-curation
 	pip3 install --user -r requirements.txt
 
-to update, go to your 'gisaid-curation' folder, and type
+To update, go to your 'gisaid-curation' folder, and type
 	
 	git pull
 
 ## How to use it
+
+I advise to always update the soft before using it, in case some modifications were done:
+
+	git pull
+
+Then run it:
 
 	./data_curation.py -f 'path to metadata xls file'
 
