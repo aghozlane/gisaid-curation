@@ -48,6 +48,7 @@ def cure_metadata(file_in):
     sublabaddress_list = {}
     assembly_list = {}
     seqtechno_list = {}
+    authors_list = {}
     vnames_list = []  # list of virus names
     
     # Sometimes, assembly method was incremented by a bad "Excell fill down" by the user. Hence,
@@ -95,6 +96,8 @@ def cure_metadata(file_in):
         check_mandatory_field(line, "covv_orig_lab_addr", orilabaddress_list, alert=True)
         check_mandatory_field(line, "covv_subm_lab", sublab_list, alert=True)
         check_mandatory_field(line, "covv_subm_lab_addr", sublabaddress_list, alert=True)
+        check_mandatory_field(line, "covv_authors", authors_list, 
+                              alert=True, user_check=True)
         # Check sequence information. If not given, contact submitter, but release
         if not skip_assembly:
             # Sometimes, assembly method was incremented by a bad "Excell fill down" by the user. Hence,
@@ -110,7 +113,6 @@ def cure_metadata(file_in):
         check_coverage(line, covs_list)
 
     logger.error("TO CURATOR: check 'Patient age'.")
-    logger.error("TO CURATOR: check 'Authors'.")
 
     # Save as xls
     writer = pd.ExcelWriter(f"{metadata}.curated.xls") 
@@ -391,6 +393,7 @@ def check_mandatory_field(line, column, column_list, alert=False, user_check=Fal
     """
     For a mandatory field, check that there is something in it. If not, ask submitter 
     to fill it.
+
     Works for:
     - originating lab
     - address originating lab
@@ -399,8 +402,10 @@ def check_mandatory_field(line, column, column_list, alert=False, user_check=Fal
     - assembly
     - seq techno
 
-    alert: true: if info empty, must contact submitter AND no release
-           false: contact submitter but can release
+    alert: true: if info empty, or curator says that it is not ok:
+                 curator must contact submitter AND NO release
+           false: if info empty, or curator says that it is not ok:
+                  contact submitter but can release
     column: header of column
     line: whole line
     column_list: {text: new_text} for each 'text' already seen and checked
