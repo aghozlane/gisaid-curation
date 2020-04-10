@@ -3,7 +3,7 @@
 **Disclaimer:** This software is distributed as it is. Please double-check the results.
 If you encounter any bug/miss-correction, please put an issue on the github page, or send pull-requests!
 
-**This soft does not check 'patient age' and 'authors' columns. Please check them by yourself**
+**This soft does not check 'patient age' column. Please check it by yourself**
 
 ## Requirements
 
@@ -58,7 +58,7 @@ A file with what you have to **say to the submitter** (things that require 'Cont
 More info:
 
 - `<metadatafile.xls>.changes.log`: all changes done in the metadata
-- `<metadatafile.xls>.contact_sub.log`: changes done that lead to submitter contact. If sequence cannot be released (ERROR), it is also written. Also, this soft does not check 'patient age' and 'authors' columns. Please check them by yourself.
+- `<metadatafile.xls>.contact_sub.log`: changes done that lead to submitter contact. If sequence cannot be released (ERROR), it is also written. Also, this soft does not check 'patient age' column. Please check it by yourself.
 - `<metadatafile.xls>.virus_IDs.txt`: tsv file containing sequence IDs that have been modified. 1st column is original ID, 2nd is the new ID.
 - `<metadatafile.xls>.curated.xls`: the new xls file, with curated metadata
 
