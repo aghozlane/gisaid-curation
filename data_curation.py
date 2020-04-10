@@ -541,6 +541,7 @@ def check_coverage(line, cov_list):
     """
     cov_ok = False
     ori_cov = line["covv_coverage"]  # keep original value
+    seq = line["covv_virus_name"]
     cov = ori_cov
 
     if ori_cov in cov_list:
@@ -551,7 +552,6 @@ def check_coverage(line, cov_list):
         # If empty, fill with unknown and contact submitter
         if not cov or cov.lower() == "unknown":
             cov = "unknown"
-            logger.warning("Coverage not given. Filled with unknown (Sequence can be released)")
             cov_ok = True
         # First, keep only coverage number (no 'x')
         else:
@@ -563,17 +563,19 @@ def check_coverage(line, cov_list):
                 cov_ok = True
             except ValueError as e:
                 print("------COVERAGE checking-----")
-                cov = input(f"Given coverage ({cov}) is not an int. "
+                cov = input(f"Given coverage ({cov}) for {seq} is not an int. "
                              "Please provide an int value for coverage. "
-                             "If coverage is unkown, type 'u':\n")
+                             "If coverage is unkown, type 'U' (default):\n")
                 if cov == "u":
                     cov = "unknown"
 
     # If there was something in coverage but it was changed, log it
     # If it was empty, we just replaced by unknown. Already logged.
     if ori_cov != cov and ori_cov:
-        logger.warning(f"'Coverage' column: changed '{ori_cov}' to "
+        logger.warning(f"For {seq} 'Coverage' column: changed '{ori_cov}' to "
                        f"'{cov}'. Sequence can be released")
+    elif not ori_cov:
+        logger.warning(f"For {seq}, coverage not given. Filled with unknown (Sequence can be released)")
     cov_list[ori_cov] = cov
     line["covv_coverage"] = cov
 
