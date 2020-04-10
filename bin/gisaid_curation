@@ -1,0 +1,17 @@
+#!/usr/bin/env python3
+# coding: utf-8
+
+import sys
+
+from gisaid_curation import utils
+from gisaid_curation import data_curation
+
+
+
+if __name__ == '__main__':
+    parsed = utils.make_parser(sys.argv[1:])
+    metadata = parsed.xls_file
+    logger = utils.init_logger(metadata, "changes")
+    # Cure metadatas
+    data_curation.cure_metadata(metadata)
+    

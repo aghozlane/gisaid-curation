@@ -50,13 +50,15 @@ To run the script, use:
 
 ## What it does
 
-For each field, check if format is as expected (spaces in location, upper cases, 'unknown' in empty cells, 4,000x coverage format etc.). For fields like 'Location', 'Assembly' or 'Sequencing technology', it asks you to check that what is written is coherent. If not, give the correct value, and it will automatically change it. For example, we often see 'USA / Wyoming' instead of 'North America / USA / Wyoming'.
+For each field, check if format is as expected (spaces in location, upper cases, 'unknown' in empty cells, 4,000x coverage format etc.). For fields like 'Location', 'Assembly' or 'Sequencing technology', it asks you to check that what is written is coherent. If not, give the correct value, and it will automatically change it. For example, in 'Location' we often see 'USA / Wyoming' instead of 'North America / USA / Wyoming'.
 
 
 
 ## Output
 
-As an output of the script, you have the **currated xls file** that you can upload on the server. **warning** don't forget the sequence curation step before uploading, there might be some text to add to Comment and Symbol columns!
+As an output of the script, you have the **currated xls file** that you can upload on the server. 
+
+**warning** don't forget the sequence curation step before uploading, there might be some text to add to Comment and Symbol columns! This is not (yet) done by this soft.
 
 A file with what you have to **say to the submitter** (things that require 'Contact Submitter' in the guidelines). And if you can **release or not** the sequence:
 
