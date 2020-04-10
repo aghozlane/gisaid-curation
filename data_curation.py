@@ -61,6 +61,7 @@ def cure_metadata(file_in):
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     instructions = pd.read_excel(file_in, sheet_name=0, header=0, dtype=str)
 
+
     # Empty cells
     md = md.fillna("")
     corresp_file = f"{file_in}.virus_IDs.txt"
@@ -143,57 +144,63 @@ def check_location(line, locations):
     write_warning = True
     ori_location = line["covv_location"]
     location = ori_location
-    # If we already saw this field, and it was valid, just skip checking this time
-    if location in locations:
-        final_location = locations[location]
-    else:
-        # Separate by continent, country, region
-        sep = location.strip().split("/")
-        sep = [f.strip() for f in sep]
-        formatted_sep = checked_location_format(location, locations)
-        final_location = " / ".join(formatted_sep)
-        unidecode_location = unidecode.unidecode(final_location)
-        # If we removed accents, inform curator and ask for approval
-        if final_location != unidecode_location:
-            print("------LOCATION checking-----")
-            print(f"{location} was changed to {unidecode_location}.")
-            write_warning = False
-        if write_warning:
-            print("------LOCATION checking-----")
-        # If it is a location we never saw before, ask user to validate
-        answer = input(f"Is location '{unidecode_location}' ok? ([Y]/n)")
-        # If answer not yes/no, re-ask question
-        while answer.lower() not in ["yes", "y", "no", "n", ""]:
-            answer = input(f"Is location '{unidecode_location}' ok? ([Y]/n)")
-        # if answer is no, ask user for new text for location
-        if answer.lower() in ["n", "no"]:
-            answer = input("Please enter correct location, in "
-                           "format 'Continent / Country / Region'\n")
-            # Check new given location is ok
-            formatted_sep = checked_location_format(answer, locations)
-        final_location = " / ".join(formatted_sep)
-    
-    final_location = unidecode.unidecode(final_location)
-    # If location was changed, inform curator
-    if ori_location != final_location:
-        logger.info(f"'Location' column: changed '{ori_location}' to '{final_location}'.")
+    location_ok = False
+    while not location_ok:
+        # If we already saw this field, and it was valid, just skip checking this time
+        if location in locations:
+            location = locations[location]
+            line["covv_location"] = location
+            locations[ori_location] = location
+            location_ok = True
+            return
+        # If never seen before, check format
+        else:
+            # Separate by continent, country, region
+            sep = location.strip().split("/")
+            # Keep only each field without accent, non-utf8 characters, and no trailing spaces
+            sep = [unidecode.unidecode(f.strip()) for f in sep]
+            formatted_sep = checked_location_format(sep, location, locations)
+            location = " / ".join(formatted_sep)
+            # If we removed accents, inform curator and ask for approval
+            if location != ori_location:
+                print("------LOCATION checking-----")
+                print(f"{ori_location} was changed to {location}.")
+                write_warning = False
+            # If warning comes from a change, the 'LOCATION checking' flag was
+            # already printed.
+            # If not (just asking user confirmation), print 'LOCATION checking' here
+            if write_warning:
+                print("------LOCATION checking-----")
+            # If it is a location we never saw before, ask user to validate
+            answer = input(f"Is location '{location}' ok? ([Y]/n)")
+            # If answer not yes/no, re-ask question
+            while answer.lower() not in ["yes", "y", "no", "n", ""]:
+                answer = input(f"Is location '{location}' ok? ([Y]/n)")
+            # if answer is no, ask user for new text for location
+            if answer.lower() in ["n", "no"]:
+                answer = input("Please enter correct location, in "
+                               "format 'Continent / Country [/ Region]'\n")
+                location = answer
+            elif not answer or answer.lower() in ["y", "yes"]:
+                location_ok = True
 
-    line["covv_location"] = final_location
-    locations[ori_location] = final_location
+    # If location was changed, inform curator.
+    # If it was changed exactly as before, no need to write it
+    if ori_location != location:
+        logger.info(f"'Location' column: changed '{ori_location}' to '{location}'.")
+
+    line["covv_location"] = location
+    locations[ori_location] = location
 
 
-def checked_location_format(location, locations):
+def checked_location_format(sep, location, locations):
     """
     Check if Location is in expected format: Continent / Country / Region
 
     location -> str
     locations -> dict {prev_loc: new_loc}
     """
-    sep = location.strip().split("/")
-    # Keep only elements without ' ' & co
-    sep = [f.strip() for f in sep]
     new_sep = sep
-
     # Check that location has at least continent, and at most 3 fields
     # If not, ask user for location field
     while len(new_sep) < 2:
@@ -338,6 +345,7 @@ def check_column(line, column, column_list, capital=False):
         # If empty or UNKNOWN: put 'unknown'
         elif not column_text or column_text.lower() == "unknown":
             final_column_text = "unknown"
+            column_list[column_text] = "unknown"
             text_ok = True
         else:
             # Put first letter in upper case if asked
@@ -351,8 +359,8 @@ def check_column(line, column, column_list, capital=False):
         column_list[column_text] = final_column_text
     if final_column_text != column_text:
         logger.info(f"For {seq}, '{column}' column: changed '{column_text}' to '{final_column_text}'.")
-    # Update information
-    line[column] = final_column_text
+        # Update information
+        line[column] = final_column_text
 
 
 def check_mandatory_field(line, column, column_list, alert=False, user_check=False):
@@ -438,28 +446,28 @@ def check_date(line, dates_list):
     new_date = ori_date
     # Try to convert date to string, if it was in date format in excel
     try:
-        new_date = unidecode.unidecode(ori_date)
         # if complete date: written as 2020-03-01 00:00:00
         # if YYYY-MM -> written as is, so no need to change
-        if "00:00:00" in date:
+        if "00:00:00" in new_date:
             new_date = str(pd.to_datetime(ori_date, yearfirst=True).strftime("%Y-%m-%d"))
     # If not able to convert, date is already a string, so stay as it is, and it will be checked as a string
     except:
         pass
+    new_date = unidecode.unidecode(new_date)
     seq = line["covv_virus_name"]
     # If we already saw and checked this, reuse what has been done
     if new_date in dates_list:
         line["covv_collection_date"] = dates_list[new_date]
     # If no date given, put unknown (empty field is 'NA filled up')
-    if not new_date or new_date.lower() == "unknown" or new_date == "NA filled up":
+    if not new_date or new_date.lower() == "unknown":
         line["covv_collection_date"] = "unknown"
         dates_list[new_date] = "unknown"
         return
 
     # Date given and never seen before: check format
     correct_format = False
-    numbers = ori_date
-    date = ori_date
+    numbers = new_date
+    date = new_date
     while not correct_format:
         try:
             # get year, month, day
@@ -480,7 +488,7 @@ def check_date(line, dates_list):
             numbers = input(f"For sequence {seq}, wrong format for collection date: {date}. \n"
                             "Please enter correct collection date in YYYY or "
                             "YYYY-MM or YYYY-MM-DD format:\n")
-            date = numbers
+            new_date = numbers
     str_numbers = [str(n) for n in numbers]
     date_ok = "-".join(str_numbers)
     dates_list[ori_date] = date_ok
@@ -535,15 +543,15 @@ def check_coverage(line, cov_list):
     ori_cov = line["covv_coverage"]  # keep original value
     cov = ori_cov
 
-    if cov in cov_list:
-        cov = cov_list[cov]
+    if ori_cov in cov_list:
+        cov = cov_list[ori_cov]
         cov_ok = True
 
     while not cov_ok:
         # If empty, fill with unknown and contact submitter
         if not cov or cov.lower() == "unknown":
             cov = "unknown"
-            logger.warning("Coverage not given. (Sequence can be released)")
+            logger.warning("Coverage not given. Filled with unknown (Sequence can be released)")
             cov_ok = True
         # First, keep only coverage number (no 'x')
         else:
@@ -561,7 +569,9 @@ def check_coverage(line, cov_list):
                 if cov == "u":
                     cov = "unknown"
 
-    if ori_cov != cov:
+    # If there was something in coverage but it was changed, log it
+    # If it was empty, we just replaced by unknown. Already logged.
+    if ori_cov != cov and ori_cov:
         logger.warning(f"'Coverage' column: changed '{ori_cov}' to "
                        f"'{cov}'. Sequence can be released")
     cov_list[ori_cov] = cov
