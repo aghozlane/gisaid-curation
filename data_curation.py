@@ -61,9 +61,8 @@ def cure_metadata(file_in):
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
     instructions = pd.read_excel(file_in, sheet_name=0, header=0, dtype=str)
 
-    # Empty cells -> put 'NA filled up'. Chose not to put only "NA" because it could be a real value put by the user, and that should
-    # not be considered as an empty cell. So, to be sure it is empty, let's fill it with something that would never appear in reality
-    md = md.fillna("NA filled up")
+    # Empty cells
+    md = md.fillna("")
     corresp_file = f"{file_in}.virus_IDs.txt"
     # create empty file to put curated metadata
     open(corresp_file, "w").close()
