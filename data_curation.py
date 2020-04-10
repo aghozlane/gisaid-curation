@@ -324,6 +324,10 @@ def checked_vname_format(vname, location, countries):
 
 def check_column(line, column, column_list, capital=False):
     """
+    First letter must be uppercase, others lowercase.
+    if details/history, ask curator to confirm. Sometimes, it is written like 'clinical sample'.
+    Should be replaced by 'Original (clinical sample)'
+
     line = pandas.core.series.Series
     column : str, header of column to check
     column_list : dict {ori_text:new_text}
@@ -336,11 +340,11 @@ def check_column(line, column, column_list, capital=False):
     column_text = line[column]
     seq = line["covv_virus_name"]
 
-    final_column_text = ""
+    final_column_text = column_text
     while not text_ok:
         # If we already saw this field, and it was valid, just skip checking this time
-        if column_text in column_list:
-            final_column_text = column_list[column_text]
+        if column_text.lower() in column_list:
+            final_column_text = column_list[column_text.lower()]
             text_ok = True
         # If empty or UNKNOWN: put 'unknown'
         elif not column_text or column_text.lower() == "unknown":
@@ -348,15 +352,34 @@ def check_column(line, column, column_list, capital=False):
             column_list[column_text] = "unknown"
             text_ok = True
         else:
-            # Put first letter in upper case if asked
-            if capital:
-                final_column_text = column_text.capitalize()
-            # Remove accents
-            final_column_text = unidecode.unidecode(final_column_text)
-            text_ok = True
+            # If column is covv_passage, we will ask user to confirm. If he confirms,
+            # answer ok will be True. Otherwise, False -> recheck
+            # Ask to check if cov_passage:
+            answer_ok = True  # Did the curator answer yes, or a new text
+            if column == "covv_passage":
+                answer = input(f"Is '{column_text}' ok for 'Passage details/history'? "
+                                "It should start with Original or Vero. Y/new_text:\n" )
+                # If user answered yes, we keep what we already have
+                if not answer or answer.lower() in ["y", "yes", ""]:
+                    final_column_text = column_text
+                # If answer is a new string (not 'no'), this is the new text
+                # User should not answer 'no', but let's check
+                elif answer and answer.lower() not in ["no", "n"]:
+                    final_column_text = answer
+                else:
+                    answer_ok = False
+                # If he answered no, will be asked again
+            # If user confirmed or gave new text, format text and release
+            if answer_ok:
+                # Put first letter in upper case if asked
+                if capital:
+                    final_column_text = final_column_text.capitalize()
+                # Remove accents
+                final_column_text = unidecode.unidecode(final_column_text)
+                text_ok = True
 
     if not final_column_text in column_list:
-        column_list[column_text] = final_column_text
+        column_list[column_text.lower()] = final_column_text
     if final_column_text != column_text:
         logger.info(f"For {seq}, '{column}' column: changed '{column_text}' to '{final_column_text}'.")
         # Update information
