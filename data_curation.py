@@ -357,6 +357,7 @@ def check_column(line, column, column_list, capital=False):
             # Ask to check if cov_passage:
             answer_ok = True  # Did the curator answer yes, or a new text
             if column == "covv_passage":
+                print("------PASSAGE DETAILS/HISTORY checking-----")
                 answer = input(f"Is '{column_text}' ok for 'Passage details/history'? "
                                 "It should start with Original or Vero. Y/new_text:\n" )
                 # If user answered yes, we keep what we already have
@@ -388,7 +389,7 @@ def check_column(line, column, column_list, capital=False):
 
 def check_mandatory_field(line, column, column_list, alert=False, user_check=False):
     """
-    For a mandatory field, check that there is something in it. If not, ask submitter user 
+    For a mandatory field, check that there is something in it. If not, ask submitter 
     to fill it.
     Works for:
     - originating lab
@@ -410,51 +411,59 @@ def check_mandatory_field(line, column, column_list, alert=False, user_check=Fal
     text = line[column]
     seq = line["covv_virus_name"]
 
-    seen_before = False
+    new_text = text
+
+    # Checkpoint 1:
     # already seen and checked
     if text in column_list:
         new_text = column_list[text]
-        seen_before = True
-    # Not seen: check if this is OK or not
-    else:
-        new_text = text
-    # If check_user true: ask user if current text is ok for this column
-    if new_text and not seen_before and user_check:
-        print(f"------{column.upper()} checking-----")
-        answer = input(f"Is '{new_text}' fine for column {column}? \nanswers: 'Y'/'new_value'/'s' ('Y' (default) "
-                        "to accept this text, 'new_value' = text to put instead of current one, "
-                        "'s' to skip this column in all sequences, and check it yourself after).\n")
-        if answer.lower() in ['s', 'skip']:
-            # ask to ignore this column for next lines
-            return True
-        elif answer.lower() not in ['y', 'yes', '']:
-            new_text = answer
+        line[column] = new_text
+        return False
 
-    if new_text.lower() == "unknown":
+    # Checkpoint 2:
+    # If new text is empty, or filled with unknown, and it is the first time we are 
+    # in this case (did not end with first check point), write warning, or error according to 
+    # 'alert' flag
+    if not new_text or new_text.lower() == "unknown":
         if alert:
             logger.error(f"For {seq}, '{column}' is unknown. "
-                          "Please give this information. NO RELEASE")
-            new_text = "unknown"
-        else:
-            logger.error(f"For {seq}, '{column}' is unknown. "
-                          "Please give this information. NO RELEASE")
-            new_text = "unknown"
-
-    while not new_text:
-        if alert:
-            logger.error(f"{seq} has no {column} text. Filled to unknown. "
-                          "Please give this information. NO RELEASE")
+                          "Ask submitter to give this information. NO RELEASE")
             new_text = "unknown"
         else:
             logger.warning(f"{seq} has no {column} text. Filled to unknown. "
-                           "Please give this information. Can be released.")
+                           "Inform submitter he could give this information. Can be released.")
             new_text = "unknown"
-        
+
+    # Checkpoint 3:
+    # If there is something (not unknown), ask user_check = True
+    # Ask user if this text is ok or not 
+    if new_text != "unknown" and user_check:
+        text_ok = False
+        while not text_ok:
+            print(f"\n------{column.upper()} checking-----")
+            answer = input(f"For seq '{seq}', is '{new_text}' fine for column {column}? Answers:"
+                            " 'Y' to accept this text (default)\n"
+                            "<new_value>: text to put instead of current one\n"
+                            "'s': to skip this column in all sequences, and check "
+                            "it yourself after).\n")
+            # user asks to ignore this column starting from this line
+            if answer.lower() in ['s', 'skip']:
+                return True
+            # User did entered a value:
+            # if not yes and not no, new_text = new_value
+            elif answer.lower() not in ['y', 'yes', '', 'n', 'no']:
+                new_text = answer
+                text_ok = True
+            # if user said yes -> keep new_text, and text_ok = True
+            elif answer.lower() in ['y', 'yes', '']:
+                text_ok = True
+            # if user said no, nothing changes (keep new_text, and text_ok still False)
+
     # Remove accents
     new_text = unidecode.unidecode(new_text)
     if text != new_text:
         logger.info(f"For sequence {seq}, '{column}' column: changed '{text}' to '{new_text}'.")
-    # Update information
+        # Update information
     column_list[text] = new_text
     line[column] = new_text
     return False
@@ -598,7 +607,8 @@ def check_coverage(line, cov_list):
         logger.warning(f"For {seq} 'Coverage' column: changed '{ori_cov}' to "
                        f"'{cov}'. Sequence can be released")
     elif not ori_cov:
-        logger.warning(f"For {seq}, coverage not given. Filled with unknown (Sequence can be released)")
+        logger.warning(f"For {seq}, coverage not given. Filled with unknown "
+                        "(Sequence can be released)")
     cov_list[ori_cov] = cov
     line["covv_coverage"] = cov
 
