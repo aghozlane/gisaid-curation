@@ -29,15 +29,24 @@ To update, go to your 'gisaid-curation' folder, and type
 	
 	git pull
 
-## How to use it
+## How to install it
 
-I advise to always update the soft before using it, in case some modifications were done:
+To install the software, and being able to call it from anywhere in your folders:
+
+	pip3 install -e .
+
+
+## How to run it
+
+I advise to always update the soft before using it, in case some modifications were done (which could be very often for this 
+new-born software until it is more stable). For that, go to `gisaid-curation` folder, and type:
 
 	git pull
 
-Then run it:
+To run the script, use:
 
-	./data_curation.py -f 'path to metadata xls file'
+	gisaid_curation -f 'path to metadata xls file'
+
 
 ## What it does
 
