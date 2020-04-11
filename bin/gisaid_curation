@@ -7,11 +7,10 @@ from gisaid_curation import utils
 from gisaid_curation import data_curation
 
 
-
 if __name__ == '__main__':
     parsed = utils.make_parser(sys.argv[1:])
     metadata = parsed.xls_file
-    logger = utils.init_logger(metadata, "changes")
+    logger = utils.init_logger(metadata, "gisaid_curation")
     # Cure metadatas
     data_curation.cure_metadata(metadata)
     
