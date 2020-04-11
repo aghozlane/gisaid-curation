@@ -25,17 +25,17 @@
 import sys
 import pandas as pd
 import unidecode
+
 import logging
+logger = logging.getLogger("gisaid_curation.metadata")
 
 from gisaid_curation import utils
-
 
 
 def cure_metadata(file_in):
     """
     file_in in xls format
     """
-    logger = logging.getLogger("gisaid_curation.metadata")
     # dict to put {original_value: new_value} (new_value can be the same as original one)
     # to avoid re-checking next time we see this value
     locations_list = {}
