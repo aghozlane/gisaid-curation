@@ -25,14 +25,17 @@
 import sys
 import pandas as pd
 import unidecode
+import logging
 
-import utils
+from gisaid_curation import utils
+
 
 
 def cure_metadata(file_in):
     """
     file_in in xls format
     """
+    logger = logging.getLogger("gisaid_curation.metadata")
     # dict to put {original_value: new_value} (new_value can be the same as original one)
     # to avoid re-checking next time we see this value
     locations_list = {}
@@ -621,5 +624,5 @@ def check_coverage(line, cov_list):
 if __name__ == '__main__':
     parsed = utils.make_parser(sys.argv[1:])
     metadata = parsed.xls_file
-    logger = utils.init_logger(metadata, "changes")
+    logger = utils.init_logger(metadata, "gisaid_curation")
     cure_metadata(metadata)
