@@ -118,7 +118,7 @@ def cure_metadata(file_in):
     logger.error("TO CURATOR: check 'Patient age'.")
 
     # Save as xls
-    writer = pd.ExcelWriter(f"{metadata}.curated.xls") 
+    writer = pd.ExcelWriter(f"{file_in}.curated.xls") 
     instructions.to_excel(writer, sheet_name='instructions', index=False)
     md.to_excel(writer, sheet_name='Submissions', index=False)
     writer.save()
@@ -271,11 +271,12 @@ def check_vnames(line, vnames_list, countries, corresp_file):
     if final_vname not in vnames_list:
         vnames_list.append(final_vname)
     # Log if we changed something
-    if vname != final_vname:
+    if orig_vname != final_vname:
         with open(corresp_file, "a") as cf:
             cf.write("\t".join([orig_vname, final_vname]) + "\n")
         logger.warning(f"Changed sequence name '{orig_vname}' to '{final_vname}'. "
                         "Sequence can be released.")
+
     line["covv_virus_name"] = final_vname
 
 
