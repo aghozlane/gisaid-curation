@@ -614,9 +614,14 @@ def check_coverage(line, cov_list):
             cov = cov.lower().strip().split('x')[0]
             # try to convert to int.
             try:
-                int_cov = int(cov.replace(",", ""))
-                cov = str(f"{int_cov:,}x")
-                cov_ok = True
+                if cov.replace(",", "").isdigit():
+                    int_cov = int(cov)
+                    cov = str(f"{int_cov:,}x")
+                    cov_ok = True
+                else:
+                    float_cov = float(cov)
+                    cov = str(f"{float_cov:,}x")
+                    cov_ok = True
             except ValueError as e:
                 print("------COVERAGE checking-----")
                 cov = input(f"Given coverage ({cov}) for {seq} is not an int. "
