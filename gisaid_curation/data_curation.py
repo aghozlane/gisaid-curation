@@ -60,6 +60,7 @@ def cure_metadata(file_in):
     skip_assembly = False
     # same as for assembly method
     skip_seqtechno = False
+    skip_authors = False
 
     # Read input xls file
     md = pd.read_excel(file_in, sheet_name=1, header=0, dtype=str)
@@ -99,8 +100,9 @@ def cure_metadata(file_in):
         check_mandatory_field(line, "covv_orig_lab_addr", orilabaddress_list, alert=True)
         check_mandatory_field(line, "covv_subm_lab", sublab_list, alert=True)
         check_mandatory_field(line, "covv_subm_lab_addr", sublabaddress_list, alert=True)
-        check_mandatory_field(line, "covv_authors", authors_list, 
-                              alert=True, user_check=True)
+        if not skip_authors:
+            skip_authors = check_mandatory_field(line, "covv_authors", authors_list, 
+                                                 alert=True, user_check=True)
         # Check sequence information. If not given, contact submitter, but release
         if not skip_assembly:
             # Sometimes, assembly method was incremented by a bad "Excell fill down" by the user. Hence,
@@ -399,20 +401,25 @@ def check_mandatory_field(line, column, column_list, alert=False, user_check=Fal
     to fill it.
 
     Works for:
-    - originating lab
-    - address originating lab
-    - submitting lab
-    - address submitting lab
-    - assembly
-    - seq techno
+    - originating lab (alert=True, user_check=False)
+    - address originating lab (alert=True, user_check=False)
+    - submitting lab (alert=True, user_check=False)
+    - address submitting lab (alert=True, user_check=False)
+    - assembly (alert=False, user_check=True)
+    - seq techno (alert=False, user_check=True)
+    - authors (alert=True, user_check=True)
 
-    alert: true: if info empty, or curator says that it is not ok:
-                 curator must contact submitter AND NO release
-           false: if info empty, or curator says that it is not ok:
-                  contact submitter but can release
-    column: header of column
     line: whole line
+    column: header of column
     column_list: {text: new_text} for each 'text' already seen and checked
+    alert: true: if info empty or unknwon, or curator says that it is not ok:
+                 curator must contact submitter AND NO release. 
+                 ex: orig_lab, orig_lab_address, sub_lab, sub_lab_address
+           false: if info empty or unknown, or curator says that it is not ok:
+                  contact submitter but can release
+    user_check: true: if not empty or unknown, ask user if this text is ok or not. 
+                      User can answer 's' to skip this column starting from this sequence.
+                false: if not empty or unknown, just keep text, do not ask user. (so, no possibility to skip)
 
     return bool: if column will be skipped after or not
 
@@ -447,26 +454,34 @@ def check_mandatory_field(line, column, column_list, alert=False, user_check=Fal
     # If there is something (not unknown), ask user_check = True
     # Ask user if this text is ok or not 
     if new_text != "unknown" and user_check:
-        text_ok = False
-        while not text_ok:
-            print(f"\n------{column.upper()} checking-----")
-            answer = input(f"For seq '{seq}', is '{new_text}' fine for column {column}? Answers:"
-                            " 'Y' to accept this text (default)\n"
-                            "<new_value>: text to put instead of current one\n"
-                            "'s': to skip this column in all sequences, and check "
-                            "it yourself after).\n")
-            # user asks to ignore this column starting from this line
-            if answer.lower() in ['s', 'skip']:
-                return True
-            # User did entered a value:
-            # if not yes and not no, new_text = new_value
-            elif answer.lower() not in ['y', 'yes', '', 'n', 'no']:
-                new_text = answer
-                text_ok = True
-            # if user said yes -> keep new_text, and text_ok = True
-            elif answer.lower() in ['y', 'yes', '']:
-                text_ok = True
-            # if user said no, nothing changes (keep new_text, and text_ok still False)
+        print(f"\n------{column.upper()} checking-----")
+        answer = input(f"For seq '{seq}', is '{new_text}' fine for column {column}? \nAnswers:\n"
+                        "\t* 'Y' (default) to accept this text. Following lines with the "
+                        "same text will be directly considered as 'OK'\n"
+                        "\t* 'no': this text is not correct. Keep it as is, but write "
+                        "a warning in the contact_submitter file. As for 'y', following lines with the "
+                        "same text will be directly considered as 'OK'\n"
+                        "\t* <new_value>: text to put instead of current one\n"
+                        "\t* 's': to skip checking this column starting from this sequence. "
+                        "Whatever the content of the following lines, it will be kept as is, "
+                        "and you can check it yourself after.\n")
+        # user asks to ignore this column starting from this line
+        if answer.lower() in ['s', 'skip']:
+            logger.error(f"TO CURATOR: You skipped {column} starting from sequence {seq}. Please check it "
+                         "yourself.")
+            return True
+        # if user said no, write warning or alert, and keep same text
+        elif answer.lower() in ['no', 'n']:
+            if alert:
+                logger.error(f"Sequence {seq}: Wrong text for {column} column. Ask submitter more details. "
+                                "NO release")
+            else:
+                logger.warning(f"Sequence {seq}: Wrong text for {column} column. Ask submitter. Can be released." )
+        # User entered a value:
+        # if not yes and not no (and not skip), new_text = new_value
+        elif answer.lower() not in ['y', 'yes', '', 'n', 'no']:
+            new_text = answer
+        # if user said yes -> keep new_text (as for 'no', but without any warning)
 
     # Remove accents
     new_text = unidecode.unidecode(new_text)
