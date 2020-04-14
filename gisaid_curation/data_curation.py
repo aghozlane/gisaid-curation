@@ -624,8 +624,8 @@ def check_coverage(line, cov_list):
                     cov_ok = True
             except ValueError as e:
                 print("------COVERAGE checking-----")
-                cov = input(f"Given coverage ({cov}) for {seq} is not an int. "
-                             "Please provide an int value for coverage. "
+                cov = input(f"Given coverage ({cov}) for {seq} is not an int or a float. "
+                             "Please provide an int/float value for coverage. "
                              "If coverage is unkown, type 'U' (default):\n")
                 if cov == "u":
                     cov = "unknown"
